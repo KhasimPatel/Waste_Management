@@ -54,7 +54,7 @@ export default function RecycLensLanding() {
   <div className="container mx-auto px-4 relative z-10">
     <div className="flex flex-col items-center justify-center text-center min-h-[400px]">
       <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight max-w-5.5xl">
-        Smart Waste Management for Cleaner Cities
+        Managing Waste Today for a Healthier Tomorrow.
       </h2>
       <p className="text-lg md:text-xl mb-8 text-green-50 max-w-2xl leading-relaxed">
         Leveraging AI-powered image verification and intelligent routing to optimize waste collection, 

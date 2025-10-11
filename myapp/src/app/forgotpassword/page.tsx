@@ -1,5 +1,6 @@
 // src/app/forgot-password/page.tsx
 'use client';
+import axios from 'axios';
 
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Mail, Lock, CheckCircle, Eye, EyeOff } from 'lucide-react';
@@ -19,87 +20,176 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
-  // Handle Step 1: Request OTP
-  const handleRequestOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+  // // Handle Step 1: Request OTP
+  // const handleRequestOTP = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setError('');
+  //   setIsLoading(true);
 
-    try {
-      // Simulate API call to send OTP
-      await new Promise(resolve => setTimeout(resolve, 1500));
+  //   try {
+  //     // Simulate API call to send OTP
+  //     await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Add your OTP request logic here
-      console.log('Requesting OTP for:', empId);
+  //     // Add your OTP request logic here
+  //     console.log('Requesting OTP for:', empId);
       
-      setStep(2); // Move to OTP verification step
-    } catch (err) {
-      setError('Failed to send OTP. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  //     setStep(2); // Move to OTP verification step
+  //   } catch (err) {
+  //     setError('Failed to send OTP. Please try again.');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
-  // Handle Step 2: Verify OTP
-  const handleVerifyOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setIsLoading(true);
+  // // Handle Step 2: Verify OTP
+  // const handleVerifyOTP = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setError('');
+  //   setIsLoading(true);
 
-    try {
-      // Simulate API call to verify OTP
-      await new Promise(resolve => setTimeout(resolve, 1500));
+  //   try {
+  //     // Simulate API call to verify OTP
+  //     await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Add your OTP verification logic here
-      console.log('Verifying OTP:', otp);
+  //     // Add your OTP verification logic here
+  //     console.log('Verifying OTP:', otp);
       
-      setStep(3); // Move to password reset step
-    } catch (err) {
-      setError('Invalid OTP. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  //     setStep(3); // Move to password reset step
+  //   } catch (err) {
+  //     setError('Invalid OTP. Please try again.');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
-  // Handle Step 3: Reset Password
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  // // Handle Step 3: Reset Password
+  // const handleResetPassword = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setError('');
 
-    // Validate passwords match
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
+  //   // Validate passwords match
+  //   if (newPassword !== confirmPassword) {
+  //     setError('Passwords do not match');
+  //     return;
+  //   }
 
-    // Validate password strength (optional)
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters long');
-      return;
-    }
+  //   // Validate password strength (optional)
+  //   if (newPassword.length < 8) {
+  //     setError('Password must be at least 8 characters long');
+  //     return;
+  //   }
 
-    setIsLoading(true);
+  //   setIsLoading(true);
 
-    try {
-      // Simulate API call to reset password
-      await new Promise(resolve => setTimeout(resolve, 1500));
+  //   try {
+  //     // Simulate API call to reset password
+  //     await new Promise(resolve => setTimeout(resolve, 1500));
       
-      // Add your password reset logic here
-      console.log('Resetting password for:', empId);
+  //     // Add your password reset logic here
+  //     console.log('Resetting password for:', empId);
       
-      // Show success popup
-      setShowSuccessPopup(true);
+  //     // Show success popup
+  //     setShowSuccessPopup(true);
       
-      // Redirect to login after 4 seconds
-      setTimeout(() => {
-        router.push('/login');
-      }, 4000);
+  //     // Redirect to login after 4 seconds
+  //     setTimeout(() => {
+  //       router.push('/login');
+  //     }, 4000);
       
-    } catch (err) {
-      setError('Failed to reset password. Please try again.');
-      setIsLoading(false);
-    }
-  };
+  //   } catch (err) {
+  //     setError('Failed to reset password. Please try again.');
+  //     setIsLoading(false);
+  //   }
+  // };
+
+
+
+// Step 1: Request OTP
+
+const handleRequestOTP = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+  setIsLoading(true);
+
+  try {
+    const response = await axios.post("http://localhost:5000/api/forgot-password", {
+      email: empId, // backend me email field
+    });
+
+    console.log(response.data.message); // OTP sent successfully
+    setStep(2); // move to OTP step
+
+  } catch (err: any) {
+    console.error(err.response?.data?.message || err.message);
+    setError(err.response?.data?.message || "Failed to send OTP. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// Step 2: Verify OTP
+const handleVerifyOTP = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+  setIsLoading(true);
+
+  try {
+    const response = await axios.post("http://localhost:5000/api/forgot-password/verify-otp", {
+      email: empId,
+      otp: otp,
+    });
+
+    console.log(response.data.message); // OTP verified successfully
+    setStep(3); // move to Reset Password step
+
+  } catch (err: any) {
+    console.error(err.response?.data?.message || err.message);
+    setError(err.response?.data?.message || "Invalid OTP. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// Step 3: Reset Password
+const handleResetPassword = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError('');
+
+  // Validate passwords match
+  if (newPassword !== confirmPassword) {
+    setError('Passwords do not match');
+    return;
+  }
+
+  // Optional: Validate password strength
+  if (newPassword.length < 8) {
+    setError('Password must be at least 8 characters long');
+    return;
+  }
+
+  setIsLoading(true);
+
+  try {
+    const response = await axios.post("http://localhost:5000/api/forgot-password/reset-password", {
+      email: empId,
+      newPassword,
+      confirmPassword,
+    });
+
+    console.log(response.data.message); // Password reset successfully
+    setShowSuccessPopup(true);
+
+    // Redirect to login after 4 seconds
+    setTimeout(() => router.push('/login'), 4000);
+
+  } catch (err: any) {
+    console.error(err.response?.data?.message || err.message);
+    setError(err.response?.data?.message || "Failed to reset password. Please try again.");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 flex items-center justify-center p-4">

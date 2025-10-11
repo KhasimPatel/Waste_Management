@@ -1,5 +1,6 @@
 // src/app/login/page.tsx
 'use client';
+import axios from 'axios';
 
 import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, User, Shield, ArrowLeft } from 'lucide-react';
@@ -28,26 +29,46 @@ export default function LoginPage() {
   setError('');
   setIsLoading(true);
 
-  try {
-    // Simulate API authentication call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+  // try {
+  //   // Simulate API authentication call
+  //   await new Promise(resolve => setTimeout(resolve, 1500));
     
-    // Example: Check credentials (replace with actual API call)
-    if (formData.username && formData.password) {
-      console.log('Login successful:', { username: formData.username, rememberMe });
+  //   // Example: Check credentials (replace with actual API call)
+  //   if (formData.username && formData.password) {
+  //     console.log('Login successful:', { username: formData.username, rememberMe });
       
-      // Navigate to admin dashboard
-      router.push('/AdminDashboard');
-    } else {
-      throw new Error('Invalid credentials');
-    }
+  //     // Navigate to admin dashboard
+  //     router.push('/AdminDashboard');
+  //   } else {
+  //     throw new Error('Invalid credentials');
+  //   }
     
-  } catch (err) {
-    setError('Invalid username or password. Please try again.');
-    setIsLoading(false);
-  }
+  // } catch (err) {
+  //   setError('Invalid username or password. Please try again.');
+  //   setIsLoading(false);
+  // }
   // Note: Don't set isLoading to false here if navigation is successful
   // as the component will unmount during navigation
+
+
+try {
+  const response = await axios.post("http://localhost:5000/api/login", {
+    email: formData.username,
+    password: formData.password,
+  });
+
+  // Success
+  const data = response.data;
+  localStorage.setItem("token", data.token);
+  router.push("/AdminDashboard");
+
+} catch (err: any) {
+  // Axios error
+  setError(err.response?.data?.message || "Invalid username or password.");
+  setIsLoading(false);
+}
+
+
 };
 
 

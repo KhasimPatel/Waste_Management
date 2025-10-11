@@ -1,7 +1,9 @@
 // src/app/AdminDashboard/page.tsx
 'use client';
-
+import axios from 'axios';
+import { useEffect } from 'react';
 import React, { useState } from 'react';
+import { FaUserCircle } from "react-icons/fa";
 import { 
   Users, 
   Trash2, 
@@ -36,8 +38,6 @@ interface Worker {
   id: number;
   name: string;
   phone: string;
-  email: string;
-  zone: string;
   status: 'Active' | 'Inactive';
   tasks: number;
 }
@@ -63,6 +63,60 @@ interface Report {
 
 export default function AdminDashboard() {
   const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState(""); 
+  const [userEmail, setUserEmail] = useState<string>(""); // ✅ state for email
+  const [showEmail, setShowEmail] = useState<boolean>(false); // ✅ toggle email visibility
+
+  // ✅ Fetch user email from backend
+  useEffect(() => {
+    const fetchEmail = async () => {
+      try {
+        const token = localStorage.getItem("token") || ""; // prevent null issue
+        const res = await axios.get("http://localhost:5000/api/verify-session", {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        });
+        setUserEmail(res.data.email);
+      } catch (err) {
+        console.error("Error fetching user email:", err);
+      }
+    };
+    fetchEmail();
+  }, []);
+  // 🚫 Disable back navigation after logout
+useEffect(() => {
+  const handlePopState = () => {
+    router.replace('/login');
+  };
+
+  window.addEventListener('popstate', handlePopState);
+  return () => window.removeEventListener('popstate', handlePopState);
+}, [router]);
+
+// 🔥 Logout function
+const handleLogout = async () => {
+  try {
+    // Call backend logout API
+    await axios.post('http://localhost:5000/api/logout', {}, { withCredentials: true });
+
+    // Clear localStorage/session data
+    localStorage.removeItem('token');
+
+    // Disable browser back arrow
+    window.history.pushState(null, '', window.location.href);
+    window.onpopstate = () => {
+      window.history.go(1);
+    };
+
+    // Redirect to login page
+    router.replace('/login');
+  } catch (error) {
+    console.error('Logout failed:', error);
+  }
+};
+
+
+
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showWelcome, setShowWelcome] = useState(true);
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
@@ -83,9 +137,7 @@ export default function AdminDashboard() {
   // Form states
   const [workerForm, setWorkerForm] = useState({
     name: '',
-    phone: '',
-    zone: '',
-    email: ''
+    phone: ''
   });
 
   const [locationForm, setLocationForm] = useState({
@@ -103,11 +155,11 @@ export default function AdminDashboard() {
 
   // Data states with real-time updates
   const [workers, setWorkers] = useState<Worker[]>([
-    { id: 1, name: 'Rajesh Kumar', phone: '+91-9876543210', email: 'rajesh@email.com', zone: 'Zone A', status: 'Active', tasks: 45 },
-    { id: 2, name: 'Amit Sharma', phone: '+91-9876543211', email: 'amit@email.com', zone: 'Zone B', status: 'Active', tasks: 38 },
-    { id: 3, name: 'Priya Singh', phone: '+91-9876543212', email: 'priya@email.com', zone: 'Zone C', status: 'Inactive', tasks: 52 },
-    { id: 4, name: 'Vijay Patel', phone: '+91-9876543213', email: 'vijay@email.com', zone: 'Zone D', status: 'Active', tasks: 41 },
-    { id: 5, name: 'Sunita Devi', phone: '+91-9876543214', email: 'sunita@email.com', zone: 'Zone E', status: 'Active', tasks: 48 }
+    { id: 1, name: 'Rajesh Kumar', phone: '+91-9876543210', status: 'Active', tasks: 45 },
+    { id: 2, name: 'Amit Sharma', phone: '+91-9876543211', status: 'Active', tasks: 38 },
+    { id: 3, name: 'Priya Singh', phone: '+91-9876543212', status: 'Inactive', tasks: 52 },
+    { id: 4, name: 'Vijay Patel', phone: '+91-9876543213', status: 'Active', tasks: 41 },
+    { id: 5, name: 'Sunita Devi', phone: '+91-9876543214', status: 'Active', tasks: 48 }
   ]);
 
   const [locations, setLocations] = useState<Location[]>([
@@ -126,6 +178,14 @@ export default function AdminDashboard() {
     { id: 4, user: 'Sita Sharma', location: 'Market Area', status: 'Pending', priority: 'High', count: 22, date: '2025-10-04' },
     { id: 5, user: 'Mohan Das', location: 'Station Road', status: 'Pending', priority: 'Medium', count: 18, date: '2025-10-05' }
   ]);
+  //--
+  const filteredReports = reports.filter((report) =>
+  report.user?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  report.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  report.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  report.priority?.toLowerCase().includes(searchTerm.toLowerCase())
+);
+
 
   // Stats calculations (dynamic)
   const stats = {
@@ -135,10 +195,6 @@ export default function AdminDashboard() {
     resolvedReports: reports.filter(r => r.status === 'Approved').length,
     activeWorkers: workers.filter(w => w.status === 'Active').length,
     pendingReports: reports.filter(r => r.status === 'Pending').length
-  };
-
-  const handleLogout = () => {
-    router.push('/login');
   };
 
   // Export to Excel function
@@ -169,14 +225,12 @@ export default function AdminDashboard() {
       id: workers.length + 1,
       name: workerForm.name,
       phone: workerForm.phone,
-      email: workerForm.email,
-      zone: workerForm.zone,
       status: 'Active',
       tasks: 0
     };
     setWorkers([...workers, newWorker]);
     setShowAddWorkerModal(false);
-    setWorkerForm({ name: '', phone: '', zone: '', email: '' });
+    setWorkerForm({ name: '', phone: ''});
   };
 
   // Add Location with state update
@@ -196,20 +250,51 @@ export default function AdminDashboard() {
   };
 
   // Update Password
-  const handleUpdatePassword = (e: React.FormEvent) => {
-    e.preventDefault();
+// 🔹 Function to handle password update
+const handleUpdatePassword = async (e: React.FormEvent) => {
+  e.preventDefault();
+
+  try {
+    // Check new password match
     if (passwordForm.new !== passwordForm.confirm) {
-      alert('Passwords do not match!');
+      alert("New password and confirm password do not match ");
       return;
     }
-    console.log('Updating password');
-    setShowPasswordSuccessPopup(true);
-    setPasswordForm({ current: '', new: '', confirm: '' });
-    
-    setTimeout(() => {
-      setShowPasswordSuccessPopup(false);
-    }, 3000);
-  };
+
+    // Get token from localStorage
+    const token = localStorage.getItem("token") || "";
+
+    if (!token) {
+      alert("Session expired. Please login again.");
+      router.replace("/login");
+      return;
+    }
+
+    // API call to backend
+    const response = await axios.post(
+      "http://localhost:5000/api/change-password",
+      {
+        currentPassword: passwordForm.current,
+        newPassword: passwordForm.new,
+        confirmPassword: passwordForm.confirm,
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`, // Include token in headers
+        },
+        withCredentials: true,
+      }
+    );
+
+    alert(response.data.message || "Password updated successfully !!");
+
+    // Clear form after success
+    setPasswordForm({ current: "", new: "", confirm: "" });
+  } catch (error: any) {
+    console.error("Password update error:", error);
+    alert(error.response?.data?.message || "Failed to update password !!");
+  }
+};
 
   // Approve Report with state update
   const handleApproveReport = (reportId: number) => {
@@ -239,16 +324,14 @@ export default function AdminDashboard() {
         ? {
             ...worker,
             name: workerForm.name,
-            phone: workerForm.phone,
-            email: workerForm.email,
-            zone: workerForm.zone,
+            phone: workerForm.phone
           }
         : worker
     ));
 
     setShowEditWorkerModal(false);
     setEditingWorker(null);
-    setWorkerForm({ name: '', phone: '', email: '', zone: '' });
+    setWorkerForm({ name: '', phone: ''});
   };
 
   // Add function to handle worker deletion
@@ -412,14 +495,31 @@ export default function AdminDashboard() {
               </h2>
             </div>
 
-            <div className="flex items-center space-x-4">
-              <button className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition">
-                <Bell size={20} />
-              </button>
-              <button className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition">
-                <User size={20} />
-              </button>
-            </div>
+<div className="flex items-center space-x-4">
+  {/* Notification Icon */}
+  <button className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition">
+    <Bell size={20} />
+  </button>
+
+  {/* USER ICON + EMAIL DROPDOWN */}
+  <div className="relative">
+    <button
+      className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition"
+      onClick={() => setShowEmail(!showEmail)} // toggle email visibility
+    >
+      <User size={20} />
+    </button>
+
+    {showEmail && (
+      <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg p-3 border border-gray-200 z-50">
+        <p className="text-gray-800 text-sm font-medium">
+          {userEmail || "Fetching email..."}
+        </p>
+      </div>
+    )}
+  </div>
+</div>
+
           </div>
         </header>
 
@@ -794,8 +894,6 @@ export default function AdminDashboard() {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Phone</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zone</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tasks</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -807,8 +905,6 @@ export default function AdminDashboard() {
                           <td className="px-4 py-3 text-sm text-gray-900">#W{String(worker.id).padStart(3, '0')}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{worker.name}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{worker.phone}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{worker.email}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{worker.zone}</td>
                           <td className="px-4 py-3 text-sm">
                             <span className={`px-2 py-1 rounded-full text-xs ${worker.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
                               {worker.status}
@@ -823,8 +919,6 @@ export default function AdminDashboard() {
                                   setWorkerForm({
                                     name: worker.name,
                                     phone: worker.phone,
-                                    email: worker.email,
-                                    zone: worker.zone
                                   });
                                   setShowEditWorkerModal(true);
                                 }}
@@ -863,11 +957,14 @@ export default function AdminDashboard() {
                   <div className="flex space-x-2">
                     <div className="relative">
                       <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                      <input
-                        type="text"
-                        placeholder="Search reports..."
-                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                      />
+                          <input
+                            type="text"
+                            placeholder="Search reports..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="border border-gray-300 rounded-md px-3 py-2 mb-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+
                     </div>
                     <button 
                       onClick={() => exportToExcel(reports, 'all_reports')}
@@ -894,7 +991,7 @@ export default function AdminDashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
-                      {reports.map((report) => (
+                      {filteredReports.map((report) => (
                         <tr key={report.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm text-gray-900">#REP{String(report.id).padStart(3, '0')}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{report.user}</td>
@@ -1055,34 +1152,7 @@ export default function AdminDashboard() {
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  value={workerForm.email}
-                  onChange={(e) => setWorkerForm({...workerForm, email: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="worker@email.com"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Assigned Zone</label>
-                <select
-                  value={workerForm.zone}
-                  onChange={(e) => setWorkerForm({...workerForm, zone: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                >
-                  <option value="">Select Zone</option>
-                  <option value="Zone A">Zone A - North</option>
-                  <option value="Zone B">Zone B - South</option>
-                  <option value="Zone C">Zone C - East</option>
-                  <option value="Zone D">Zone D - West</option>
-                  <option value="Zone E">Zone E - Central</option>
-                  <option value="Zone F">Zone F - Industrial</option>
-                </select>
-              </div>
+             
               <div className="flex space-x-3">
                 <button
                   type="button"
@@ -1387,7 +1457,7 @@ export default function AdminDashboard() {
                 onClick={() => {
                   setShowEditWorkerModal(false);
                   setEditingWorker(null);
-                  setWorkerForm({ name: '', phone: '', email: '', zone: '' });
+                  setWorkerForm({ name: '', phone: ''});
                 }} 
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -1417,41 +1487,13 @@ export default function AdminDashboard() {
                   required
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-                <input
-                  type="email"
-                  value={workerForm.email}
-                  onChange={(e) => setWorkerForm({...workerForm, email: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  placeholder="worker@email.com"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Assigned Zone</label>
-                <select
-                  value={workerForm.zone}
-                  onChange={(e) => setWorkerForm({...workerForm, zone: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                  required
-                >
-                  <option value="">Select Zone</option>
-                  <option value="Zone A">Zone A - North</option>
-                  <option value="Zone B">Zone B - South</option>
-                  <option value="Zone C">Zone C - East</option>
-                  <option value="Zone D">Zone D - West</option>
-                  <option value="Zone E">Zone E - Central</option>
-                  <option value="Zone F">Zone F - Industrial</option>
-                </select>
-              </div>
               <div className="flex space-x-3">
                 <button
                   type="button"
                   onClick={() => {
                     setShowEditWorkerModal(false);
                     setEditingWorker(null);
-                    setWorkerForm({ name: '', phone: '', email: '', zone: '' });
+                    setWorkerForm({ name: '', phone: ''});
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
                 >
